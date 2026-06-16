@@ -1,0 +1,423 @@
+/* =====================================================
+   Taskly — script.js
+   State management, DOM manipulation, event handling
+   ===================================================== */
+ 
+/* ── 1. State ──────────────────────────────────────── */
+ 
+/**
+ * Central application state.
+ *  tasks  : array of task objects
+ *  filter : 'all' | 'active' | 'completed'
+ */
+let state = {
+  tasks: [],
+  filter: 'all',
+};
+ 
+/**
+ * A single task looks like:
+ * {
+ *   id        : string  — unique identifier
+ *   text      : string  — task description
+ *   done      : boolean — completion flag
+ *   createdAt : number  — Unix timestamp
+ * }
+ */
+ 
+ 
+/* ── 2. LocalStorage Helpers ───────────────────────── */
+ 
+const STORAGE_KEY = 'taskly_tasks';
+ 
+/** Persist the tasks array to localStorage. */
+function saveTasks() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.tasks));
+}
+ 
+/** Load tasks from localStorage (called once on startup). */
+function loadTasks() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw) {
+    try {
+      state.tasks = JSON.parse(raw);
+    } catch {
+      // If data is corrupted, start fresh
+      state.tasks = [];
+    }
+  }
+}
+ 
+ 
+/* ── 3. Utility Helpers ────────────────────────────── */
+ 
+/** Generate a unique ID using the current timestamp + random string. */
+function generateId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+ 
+/** Format a timestamp into a human-readable relative string. */
+function formatDate(timestamp) {
+  const now  = Date.now();
+  const diff = now - timestamp; // milliseconds
+ 
+  const minutes = Math.floor(diff / 60_000);
+  const hours   = Math.floor(diff / 3_600_000);
+  const days    = Math.floor(diff / 86_400_000);
+ 
+  if (minutes < 1)  return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours   < 24) return `${hours}h ago`;
+  if (days    < 7)  return `${days}d ago`;
+ 
+  return new Date(timestamp).toLocaleDateString(undefined, {
+    month: 'short', day: 'numeric',
+  });
+}
+ 
+/** Return the tasks that match the current filter. */
+function getFilteredTasks() {
+  switch (state.filter) {
+    case 'active':    return state.tasks.filter(t => !t.done);
+    case 'completed': return state.tasks.filter(t =>  t.done);
+    default:          return state.tasks;          // 'all'
+  }
+}
+ 
+ 
+/* ── 4. Render ─────────────────────────────────────── */
+ 
+/** Cache DOM references (query once, reuse everywhere). */
+const taskList        = document.getElementById('taskList');
+const emptyState      = document.getElementById('emptyState');
+const emptyTitle      = document.getElementById('emptyTitle');
+const emptyHint       = document.getElementById('emptyHint');
+const statsText       = document.getElementById('statsText');
+const clearCompletedBtn = document.getElementById('clearCompletedBtn');
+ 
+/**
+ * Full re-render.
+ * Clears the task list and rebuilds every visible task from state.
+ * Also refreshes the stats bar and empty state visibility.
+ */
+function render() {
+  const visible = getFilteredTasks();
+ 
+  // Clear current list
+  taskList.innerHTML = '';
+ 
+  if (visible.length === 0) {
+    emptyState.hidden = false;
+    setEmptyMessage();
+  } else {
+    emptyState.hidden = true;
+    // Build each task element and append it
+    visible.forEach(task => {
+      taskList.appendChild(buildTaskEl(task));
+    });
+  }
+ 
+  updateStats();
+}
+ 
+/**
+ * Build a single <li> element for a task.
+ * @param {Object} task
+ * @returns {HTMLElement}
+ */
+function buildTaskEl(task) {
+  const li = document.createElement('li');
+  li.className = 'task-item' + (task.done ? ' done' : '');
+  li.dataset.id = task.id;
+ 
+  li.innerHTML = `
+    <!-- Completion checkbox -->
+    <input
+      type="checkbox"
+      class="task-check"
+      aria-label="Mark task as ${task.done ? 'active' : 'complete'}"
+      ${task.done ? 'checked' : ''}
+    />
+ 
+    <!-- Task body: text + timestamp -->
+    <div class="task-body">
+      <span class="task-text">${escapeHtml(task.text)}</span>
+      <span class="task-date">${formatDate(task.createdAt)}</span>
+    </div>
+ 
+    <!-- Action buttons -->
+    <div class="task-actions" role="group" aria-label="Task actions">
+      <button class="action-btn edit"   aria-label="Edit task"   title="Edit">✎</button>
+      <button class="action-btn delete" aria-label="Delete task" title="Delete">✕</button>
+    </div>
+  `;
+ 
+  return li;
+}
+ 
+/**
+ * Sanitise user text before injecting it as innerHTML.
+ * Converts dangerous characters to HTML entities.
+ */
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+ 
+/** Update the stats summary and show/hide "Clear completed" button. */
+function updateStats() {
+  const total     = state.tasks.length;
+  const doneCount = state.tasks.filter(t => t.done).length;
+  const active    = total - doneCount;
+ 
+  // Friendly pluralisation
+  statsText.textContent =
+    total === 0
+      ? '0 tasks'
+      : `${active} active · ${doneCount} done`;
+ 
+  // Only show "Clear completed" when there are completed tasks
+  clearCompletedBtn.style.visibility = doneCount > 0 ? 'visible' : 'hidden';
+}
+ 
+/** Set the empty state message depending on the active filter. */
+function setEmptyMessage() {
+  switch (state.filter) {
+    case 'active':
+      emptyTitle.textContent = 'All caught up!';
+      emptyHint.textContent  = 'No active tasks. Add one above.';
+      break;
+    case 'completed':
+      emptyTitle.textContent = 'Nothing completed yet';
+      emptyHint.textContent  = 'Finish a task and it will appear here.';
+      break;
+    default:
+      emptyTitle.textContent = 'Nothing here yet';
+      emptyHint.textContent  = 'Add your first task above to get started.';
+  }
+}
+ 
+ 
+/* ── 5. CRUD Operations ────────────────────────────── */
+ 
+/**
+ * Add a new task.
+ * @param {string} text — raw input text
+ */
+function addTask(text) {
+  const trimmed = text.trim();
+  if (!trimmed) return; // ignore blank input
+ 
+  const task = {
+    id:        generateId(),
+    text:      trimmed,
+    done:      false,
+    createdAt: Date.now(),
+  };
+ 
+  // Prepend so newest tasks appear at the top
+  state.tasks.unshift(task);
+  saveTasks();
+  render();
+}
+ 
+/**
+ * Toggle the done state of a task.
+ * @param {string} id
+ */
+function toggleTask(id) {
+  const task = state.tasks.find(t => t.id === id);
+  if (!task) return;
+ 
+  task.done = !task.done;
+  saveTasks();
+  render();
+}
+ 
+/**
+ * Delete a task permanently.
+ * @param {string} id
+ */
+function deleteTask(id) {
+  state.tasks = state.tasks.filter(t => t.id !== id);
+  saveTasks();
+  render();
+}
+ 
+/**
+ * Save the edited text for a task.
+ * @param {string} id
+ * @param {string} newText
+ */
+function saveEdit(id, newText) {
+  const trimmed = newText.trim();
+  if (!trimmed) {
+    // Empty edit = delete the task
+    deleteTask(id);
+    return;
+  }
+ 
+  const task = state.tasks.find(t => t.id === id);
+  if (!task) return;
+ 
+  task.text = trimmed;
+  saveTasks();
+  render();
+}
+ 
+/** Remove all completed tasks at once. */
+function clearCompleted() {
+  state.tasks = state.tasks.filter(t => !t.done);
+  saveTasks();
+  render();
+}
+ 
+ 
+/* ── 6. Inline Editing ─────────────────────────────── */
+ 
+/**
+ * Switch a task item into edit mode.
+ * Replaces the <span class="task-text"> with an <input>,
+ * and swaps the Edit button for a Save button.
+ * @param {HTMLElement} li — the .task-item element
+ * @param {string} id
+ */
+function enterEditMode(li, id) {
+  const task     = state.tasks.find(t => t.id === id);
+  if (!task) return;
+ 
+  const textSpan  = li.querySelector('.task-text');
+  const editBtn   = li.querySelector('.action-btn.edit');
+ 
+  // Replace static text with an input field
+  const input = document.createElement('input');
+  input.type      = 'text';
+  input.className = 'task-edit-input';
+  input.value     = task.text;
+  input.maxLength = 200;
+  input.setAttribute('aria-label', 'Edit task text');
+ 
+  textSpan.replaceWith(input);
+  input.focus();
+  input.select(); // pre-select all text for easy replacement
+ 
+  // Swap Edit → Save button
+  editBtn.textContent   = '✔';
+  editBtn.title         = 'Save';
+  editBtn.classList.replace('edit', 'save');
+  editBtn.setAttribute('aria-label', 'Save task');
+ 
+  // Mark the row as editing (keeps action buttons visible)
+  li.classList.add('editing');
+ 
+  // Helper: commit the edit
+  const commit = () => saveEdit(id, input.value);
+ 
+  // Save on Enter key
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter')  { e.preventDefault(); commit(); }
+    if (e.key === 'Escape') { render(); } // cancel edit
+  });
+ 
+  // Save when input loses focus (unless a button was clicked)
+  input.addEventListener('blur', e => {
+    // Small delay so a click on Save doesn't trigger blur first
+    setTimeout(() => {
+      const active = document.activeElement;
+      if (!li.contains(active)) commit();
+    }, 150);
+  });
+}
+ 
+ 
+/* ── 7. Event Handling ─────────────────────────────── */
+ 
+/**
+ * Event delegation on the task list.
+ * One listener handles all clicks inside the list.
+ */
+taskList.addEventListener('click', e => {
+  // Walk up from the click target to find the .task-item
+  const li = e.target.closest('.task-item');
+  if (!li) return;
+ 
+  const id = li.dataset.id;
+ 
+  // Checkbox toggled
+  if (e.target.classList.contains('task-check')) {
+    toggleTask(id);
+    return;
+  }
+ 
+  // Delete button
+  if (e.target.closest('.action-btn.delete')) {
+    deleteTask(id);
+    return;
+  }
+ 
+  // Save button (visible while editing)
+  if (e.target.closest('.action-btn.save')) {
+    const input = li.querySelector('.task-edit-input');
+    if (input) saveEdit(id, input.value);
+    return;
+  }
+ 
+  // Edit button
+  if (e.target.closest('.action-btn.edit')) {
+    enterEditMode(li, id);
+    return;
+  }
+});
+ 
+/** Add task — button click. */
+const addBtn    = document.getElementById('addBtn');
+const taskInput = document.getElementById('taskInput');
+ 
+addBtn.addEventListener('click', () => {
+  addTask(taskInput.value);
+  taskInput.value = '';
+  taskInput.focus();
+});
+ 
+/** Add task — pressing Enter in the input. */
+taskInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    addTask(taskInput.value);
+    taskInput.value = '';
+  }
+});
+ 
+/** Filter tabs — event delegation on the nav. */
+const filterNav = document.querySelector('.filter-nav');
+ 
+filterNav.addEventListener('click', e => {
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+ 
+  // Update active class
+  filterNav.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+ 
+  // Update state and re-render
+  state.filter = btn.dataset.filter;
+  render();
+});
+ 
+/** Clear completed button. */
+clearCompletedBtn.addEventListener('click', () => {
+  if (state.tasks.some(t => t.done)) {
+    clearCompleted();
+  }
+});
+ 
+ 
+/* ── 8. Startup ────────────────────────────────────── */
+ 
+// Load persisted tasks then render on page load
+loadTasks();
+render();
+ 
