@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <main class="container">
+
+        <header>
+            <h1>🌦 Weather Dashboard</h1>
+            <p>Real-Time Weather Information</p>
+        </header>
+
+        <section class="search-section">
+            <form id="weatherForm">
+                <input
+                    type="text"
+                    id="cityInput"
+                    placeholder="Enter city name..."
+                    aria-label="City Name"
+                >
+                <button type="submit">Search</button>
+            </form>
+        </section>
+
+        <div id="loading" class="loading hidden">
+            Loading weather data...
+        </div>
+
+        <div id="errorMessage" class="error hidden"></div>
+
+        <section id="weatherCard" class="weather-card hidden">
+
+            <div class="top-section">
+                <div>
+                    <h2 id="cityName"></h2>
+                    <p id="weatherCondition"></p>
+                </div>
+
+                <div>
+                    <img id="weatherIcon" alt="Weather Icon">
+                </div>
+            </div>
+
+            <div class="temperature">
+                <h1 id="temperature"></h1>
+            </div>
+
+            <div class="weather-grid">
+
+                <div class="weather-item">
+                    <h3>Humidity</h3>
+                    <p id="humidity"></p>
+                </div>
+
+                <div class="weather-item">
+                    <h3>Wind Speed</h3>
+                    <p id="windSpeed"></p>
+                </div>
+
+                <div class="weather-item">
+                    <h3>Pressure</h3>
+                    <p id="pressure"></p>
+                </div>
+
+                <div class="weather-item">
+                    <h3>Visibility</h3>
+                    <p id="visibility"></p>
+                </div>
+
+                <div class="weather-item">
+                    <h3>Sunrise</h3>
+                    <p id="sunrise"></p>
+                </div>
+
+                <div class="weather-item">
+                    <h3>Sunset</h3>
+                    <p id="sunset"></p>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <script src="script.js"></script>
+
+</body>
+</html>
