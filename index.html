@@ -3,48 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gayathri Sallolla - Google Homepage Clone</title>
+    <title>Gayathri Sallolla | Contact Form</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <!-- Navigation -->
-    <nav>
-        <ul>
-            <li><a href="#">Gmail</a></li>
-            <li><a href="#">Images</a></li>
-            <li><span class="menu">&#8942;</span></li>
-            <li><button class="signin">Sign In</button></li>
-        </ul>
-    </nav>
+<div class="container">
 
-    <!-- Main Section -->
-    <main>
+    <h1>Job Application Form</h1>
+    <p>Designed by <strong>Gayathri Sallolla</strong></p>
 
-        <h1 class="logo">
-            <span class="blue">G</span>
-            <span class="red">o</span>
-            <span class="yellow">o</span>
-            <span class="blue">g</span>
-            <span class="green">l</span>
-            <span class="red">e</span>
-        </h1>
+    <form id="contactForm">
 
-        <div class="search-box">
-            <input type="text" placeholder="Search Google or type a URL">
-        </div>
+        <label>Full Name</label>
+        <input type="text" id="name" placeholder="Enter your name">
 
-        <div class="buttons">
-            <button>Google Search</button>
-            <button>I'm Feeling Lucky</button>
-        </div>
+        <label>Email</label>
+        <input type="email" id="email" placeholder="Enter your email">
 
-    </main>
+        <label>Phone Number</label>
+        <input type="text" id="phone" placeholder="Enter your phone number">
 
-    <!-- Footer -->
-    <footer>
-        <p>Created by <strong>Gayathri Sallolla</strong> | Google Homepage Clone using HTML & CSS</p>
-    </footer>
+        <label>Message</label>
+        <textarea id="message" rows="5" placeholder="Write your message"></textarea>
+
+        <button type="submit">Submit</button>
+
+    </form>
+
+    <p id="result"></p>
+
+</div>
+
+<script src="script.js"></script>
 
 </body>
 </html>
